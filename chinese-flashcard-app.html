@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="description" content="Study Chinese with interactive flashcards">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Flashcards">
+    <title>Chinese Flashcard App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        #app { width: 100%; max-width: 600px; }
+
+        .header { text-align: center; margin-bottom: 24px; color: #1565c0; }
+        .title { font-size: 32px; font-weight: bold; margin-bottom: 12px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+
+        .card-selector { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .selector-label { font-size: 16px; font-weight: 500; color: #1565c0; }
+        .dropdown {
+            padding: 8px 14px; font-size: 15px; font-weight: 500;
+            background: white; border: 2px solid #42a5f5; border-radius: 8px;
+            cursor: pointer; color: #1565c0; outline: none; max-width: 220px;
+        }
+
+        .card {
+            width: 100%; min-height: 300px;
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            cursor: pointer; transition: background 0.3s ease;
+            margin-bottom: 16px;
+            user-select: none; -webkit-user-select: none; touch-action: pan-y;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 36px 30px; text-align: center;
+        }
+        .card.flipped { background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); }
+
+        .card-label { font-size: 11px; font-weight: bold; color: #aaa; letter-spacing: 2px; margin-bottom: 18px; }
+        .card-english { font-size: 30px; color: #2d3436; font-weight: 500; line-height: 1.3; }
+        .card-chinese { font-size: 36px; font-weight: bold; color: #2d3436; margin-bottom: 14px; line-height: 1.3; }
+        .card-pinyin { font-size: 26px; font-style: italic; color: #555; line-height: 1.4; }
+        .card-hint { font-size: 13px; color: #ccc; margin-top: 20px; }
+
+        .nav-buttons { display: flex; gap: 14px; margin-bottom: 14px; }
+        .nav-btn {
+            flex: 1; padding: 14px; font-size: 16px; font-weight: bold;
+            background: white; border: none; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15); color: #1565c0;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .nav-btn:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+        .vocab-btn {
+            width: 100%; padding: 14px; font-size: 16px; font-weight: bold;
+            background: white; border: none; border-radius: 12px; cursor: pointer;
+            margin-bottom: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            color: #1565c0; transition: transform 0.1s;
+        }
+        .vocab-btn:active { transform: scale(0.98); }
+
+        .vocab-section { background: white; border-radius: 15px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: none; }
+        .vocab-section.visible { display: block; }
+
+        .vocab-title { font-size: 18px; font-weight: bold; color: #2d3436; margin-bottom: 14px; border-bottom: 3px solid #42a5f5; padding-bottom: 10px; }
+        .vocab-item { padding: 10px 12px; background: #f8f9fa; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #42a5f5; font-size: 15px; line-height: 1.5; }
+        .vocab-hanzi { font-weight: bold; color: #2d3436; font-size: 17px; }
+        .vocab-pinyin { font-style: italic; color: #636e72; margin-left: 4px; }
+        .vocab-meaning { color: #2d3436; }
+        .grammar-note { margin-top: 14px; padding: 14px; background: #e3f2fd; border-radius: 8px; font-size: 14px; line-height: 1.6; color: #333; }
+        
+        .progress-bar { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .progress-bar-inner { background: #e0e0e0; border-radius: 8px; height: 24px; overflow: hidden; position: relative; }
+        .progress-bar-fill { background: linear-gradient(90deg, #4CAF50 0%, #81C784 100%); height: 100%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .progress-text { position: absolute; width: 100%; text-align: center; font-size: 13px; font-weight: bold; color: #333; line-height: 24px; }
+        
+        .filter-buttons { display: flex; gap: 8px; margin-bottom: 16px; }
+        .filter-btn { flex: 1; padding: 10px; font-size: 14px; font-weight: 600; background: white; border: 2px solid #42a5f5; border-radius: 10px; cursor: pointer; color: #1565c0; transition: all 0.2s; }
+        .filter-btn.active { background: #42a5f5; color: white; }
+        .filter-btn:active { transform: scale(0.97); }
+        
+        .learned-toggle { background: #4CAF50; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 14px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: all 0.2s; }
+        .learned-toggle.learned { background: #FF9800; }
+        .learned-toggle:active { transform: scale(0.98); }
+        
+        .install-prompt { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; text-align: center; display: none; }
+        .install-prompt.visible { display: block; }
+        .install-btn { background: white; color: #667eea; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div id="installPrompt" class="install-prompt">
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">📱 Install as App</div>
+        <div style="font-size: 14px; margin-bottom: 8px;">Add to your home screen for easy access!</div>
+        <button class="install-btn" id="installBtn">Install</button>
+        <button class="install-btn" id="dismissInstall" style="background: transparent; color: white; margin-left: 8px;">Maybe Later</button>
+    </div>
+
+    <div class="header">
+        <div class="title">&#127924; Chinese Flashcards</div>
+        
+        <div class="progress-bar">
+            <div class="progress-bar-inner">
+                <div class="progress-bar-fill" id="progressFill"></div>
+                <div class="progress-text" id="progressText">0 / 26 learned</div>
+            </div>
+        </div>
+        
+        <div class="filter-buttons">
+            <button class="filter-btn active" id="filterAll">All Cards</button>
+            <button class="filter-btn" id="filterUnlearned">Unlearned</button>
+            <button class="filter-btn" id="filterLearned">Learned</button>
+        </div>
+        
+        <div class="card-selector">
+            <span class="selector-label">Jump to card:</span>
+            <select class="dropdown" id="cardSelect"></select>
+        </div>
+    </div>
+
+    <div class="card" id="flashcard">
+        <div class="card-label" id="cardLabel">FRONT</div>
+        <div id="cardMain"></div>
+        <div class="card-hint" id="cardHint">Click or swipe to flip</div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="nav-btn" id="prevBtn">&#8592; Previous</button>
+        <button class="nav-btn" id="nextBtn">Next &#8594;</button>
+    </div>
+
+    <button class="learned-toggle" id="learnedToggle">✓ Mark as Learned</button>
+
+    <button class="vocab-btn" id="vocabBtn">&#128218; Show Vocabulary Notes</button>
+
+    <div class="vocab-section" id="vocabSection">
+        <div class="vocab-title">Vocabulary Breakdown</div>
+        <div id="vocabItems"></div>
+        <div class="grammar-note" id="grammarNote"></div>
+    </div>
+</div>
+
+<script>
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js')
+        .then(reg => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed'));
+}
+
+// PWA Install Prompt
+var deferredPrompt;
+var installPrompt = document.getElementById('installPrompt');
+var installBtn = document.getElementById('installBtn');
+var dismissInstall = document.getElementById('dismissInstall');
+
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!localStorage.getItem('installDismissed')) {
+        installPrompt.classList.add('visible');
+    }
+});
+
+installBtn.addEventListener('click', function() {
+    installPrompt.classList.remove('visible');
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choiceResult) {
+            deferredPrompt = null;
+        });
+    }
+});
+
+dismissInstall.addEventListener('click', function() {
+    installPrompt.classList.remove('visible');
+    localStorage.setItem('installDismissed', 'true');
+});
+
+var cards = [
+    {
+        chinese: "\u4ECA\u5929\u6211\u6CA1\u505A\u4EC0\u4E48\u3002",
+        pinyin: "J\u012Bnti\u0101n w\u01D2 m\u00E9i zu\u00F2 sh\u00E9nme.",
+        english: "I didn't do much today.",
+        vocabulary: [
+            { hanzi: "\u4ECA\u5929", pinyin: "j\u012Bnti\u0101n", meaning: "today" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u6CA1", pinyin: "m\u00E9i", meaning: "not (negation for past actions)" },
+            { hanzi: "\u505A", pinyin: "zu\u00F2", meaning: "do, make" },
+            { hanzi: "\u4EC0\u4E48", pinyin: "sh\u00E9nme", meaning: "what, anything" }
+        ],
+        grammarNote: "没 (méi) is used to negate past actions. The structure '没做什么' literally means 'didn't do what/anything' which translates to 'didn't do much.'"
+    },
+    {
+        chinese: "\u4F60\u5B66\u4E60\u4E2D\u6587\u591A\u957F\u65F6\u95F4\u4E86\uFF1F",
+        pinyin: "N\u01D0 xu\u00E9x\u00ED zh\u014Dngw\u00E9n du\u014Dch\u00E1ng sh\u00EDji\u0101n le?",
+        english: "How long have you been learning Chinese?",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u5B66\u4E60", pinyin: "xu\u00E9x\u00ED", meaning: "to study, to learn" },
+            { hanzi: "\u4E2D\u6587", pinyin: "zh\u014Dngw\u00E9n", meaning: "Chinese (language)" },
+            { hanzi: "\u591A\u957F\u65F6\u95F4", pinyin: "du\u014Dch\u00E1ng sh\u00EDji\u0101n", meaning: "how long (duration)" },
+            { hanzi: "\u4E86", pinyin: "le", meaning: "particle indicating change or completion" }
+        ],
+        grammarNote: "The structure '多长时间' asks about duration. The particle '了' at the end suggests an action that started in the past and continues to the present. This pattern is used to ask 'how long have you been doing something?'"
+    },
+    {
+        chinese: "\u4F60\u89C9\u5F97\u4E2D\u56FD\u600E\u4E48\u6837\uFF1F",
+        pinyin: "N\u01D0 ju\u00E9de zh\u014Dnggu\u00F3 z\u011Bnmey\u00E0ng?",
+        english: "What do you think about China?",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u89C9\u5F97", pinyin: "ju\u00E9de", meaning: "to feel, to think" },
+            { hanzi: "\u4E2D\u56FD", pinyin: "zh\u014Dnggu\u00F3", meaning: "China" },
+            { hanzi: "\u600E\u4E48\u6837", pinyin: "z\u011Bnmey\u00E0ng", meaning: "how about, what do you think" }
+        ],
+        grammarNote: "The phrase '觉得...怎么样' is used to ask for someone's opinion or impression. '怎么样' literally means 'how is it' and is commonly used to ask 'what do you think about...' or 'how is...'"
+    },
+    {
+        chinese: "\u4F60\u53EF\u4EE5\u4ECB\u7ECD\u4E00\u4E0B\u81EA\u5DF1\u5417\uFF1F",
+        pinyin: "N\u01D0 k\u011By\u01D0 ji\u00E8sh\u00E0o y\u00EDxi\u00E0 z\u00ECj\u01D0 ma?",
+        english: "Can you introduce yourself?",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u53EF\u4EE5", pinyin: "k\u011By\u01D0", meaning: "can, may" },
+            { hanzi: "\u4ECB\u7ECD", pinyin: "ji\u00E8sh\u00E0o", meaning: "to introduce" },
+            { hanzi: "\u4E00\u4E0B", pinyin: "y\u00EDxi\u00E0", meaning: "a bit (softens the request)" },
+            { hanzi: "\u81EA\u5DF1", pinyin: "z\u00ECj\u01D0", meaning: "oneself" },
+            { hanzi: "\u5417", pinyin: "ma", meaning: "question particle" }
+        ],
+        grammarNote: "'一下' is used after verbs to soften requests and make them more casual. It literally means 'one time' but functionally makes the request less direct and more polite."
+    },
+    {
+        chinese: "\u6211\u4E0D\u592A\u660E\u767D\u4F60\u7684\u610F\u601D\u3002",
+        pinyin: "W\u01D2 b\u00FA t\u00E0i m\u00EDngb\u00E1i n\u01D0 de y\u00ECsi.",
+        english: "I do not quite understand what you mean.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u4E0D\u592A", pinyin: "b\u00FA t\u00E0i", meaning: "not very, not quite" },
+            { hanzi: "\u660E\u767D", pinyin: "m\u00EDngb\u00E1i", meaning: "to understand" },
+            { hanzi: "\u4F60\u7684", pinyin: "n\u01D0 de", meaning: "your" },
+            { hanzi: "\u610F\u601D", pinyin: "y\u00ECsi", meaning: "meaning, intention" }
+        ],
+        grammarNote: "'不太' means 'not very' or 'not quite' and softens the negation. This is more polite than saying '不明白' (don't understand). The structure '的意思' means 'the meaning of' or 'what...means'."
+    },
+    {
+        chinese: "\u4ECA\u5929\u6211\u4E00\u76F4\u5728\u5DE5\u4F5C\u3002",
+        pinyin: "J\u012Bnti\u0101n w\u01D2 y\u00ECzh\u00ED z\u00E0i g\u014Dngzu\u00F2.",
+        english: "I have been working all day today.",
+        vocabulary: [
+            { hanzi: "\u4ECA\u5929", pinyin: "j\u012Bnti\u0101n", meaning: "today" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u4E00\u76F4", pinyin: "y\u00ECzh\u00ED", meaning: "all along, continuously" },
+            { hanzi: "\u5728", pinyin: "z\u00E0i", meaning: "at, in (indicates ongoing action)" },
+            { hanzi: "\u5DE5\u4F5C", pinyin: "g\u014Dngzu\u00F2", meaning: "to work, work" }
+        ],
+        grammarNote: "'一直在' indicates a continuous action that has been happening for a period of time. The pattern '一直在 + verb' means 'have been continuously doing something'."
+    },
+    {
+        chinese: "\u6211\u5DEE\u4E0D\u591A\u6BCF\u5929\u90FD\u4F1A\u8FD0\u52A8\u3002",
+        pinyin: "W\u01D2 ch\u00E0b\u00F9du\u014D m\u011Biti\u0101n d\u014Du hu\u00EC y\u00F9nd\u00F2ng.",
+        english: "I exercise almost every day.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5DEE\u4E0D\u591A", pinyin: "ch\u00E0b\u00F9du\u014D", meaning: "almost, nearly" },
+            { hanzi: "\u6BCF\u5929", pinyin: "m\u011Biti\u0101n", meaning: "every day" },
+            { hanzi: "\u90FD", pinyin: "d\u014Du", meaning: "all, both" },
+            { hanzi: "\u4F1A", pinyin: "hu\u00EC", meaning: "will, can" },
+            { hanzi: "\u8FD0\u52A8", pinyin: "y\u00F9nd\u00F2ng", meaning: "to exercise, sports" }
+        ],
+        grammarNote: "'差不多' means 'almost' or 'nearly'. The pattern '都会' emphasizes regularity or habitual action. Together with '每天', it expresses 'almost every day'."
+    },
+    {
+        chinese: "\u90A3\u4E2A\u8BCD\u600E\u4E48\u8BF4\u6765\u7740\uFF1F",
+        pinyin: "N\u00E0g\u00E8 c\u00ED z\u011Bnme shu\u014D l\u00E1izhe?",
+        english: "How do you say that word again?",
+        vocabulary: [
+            { hanzi: "\u90A3\u4E2A", pinyin: "n\u00E0g\u00E8", meaning: "that" },
+            { hanzi: "\u8BCD", pinyin: "c\u00ED", meaning: "word" },
+            { hanzi: "\u600E\u4E48", pinyin: "z\u011Bnme", meaning: "how" },
+            { hanzi: "\u8BF4", pinyin: "shu\u014D", meaning: "to say, to speak" },
+            { hanzi: "\u6765\u7740", pinyin: "l\u00E1izhe", meaning: "particle indicating recall (again)" }
+        ],
+        grammarNote: "'来着' is used at the end of questions to indicate trying to recall something. It's like saying 'again' or 'what was it' in English when you're trying to remember."
+    },
+    {
+        chinese: "\u6211\u5728\u90A3\u91CC\u4E00\u4E2A\u670B\u53CB\u4E5F\u6CA1\u6709\u3002",
+        pinyin: "W\u01D2 z\u00E0i n\u00E0l\u01D0 y\u00EDg\u00E8 p\u00E9ngy\u01D2u y\u011B m\u00E9iy\u01D2u.",
+        english: "I don't have a single friend there.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5728\u90A3\u91CC", pinyin: "z\u00E0i n\u00E0l\u01D0", meaning: "there, over there" },
+            { hanzi: "\u4E00\u4E2A", pinyin: "y\u00EDg\u00E8", meaning: "one, a" },
+            { hanzi: "\u670B\u53CB", pinyin: "p\u00E9ngy\u01D2u", meaning: "friend" },
+            { hanzi: "\u4E5F", pinyin: "y\u011B", meaning: "also, even" },
+            { hanzi: "\u6CA1\u6709", pinyin: "m\u00E9iy\u01D2u", meaning: "don't have, not have" }
+        ],
+        grammarNote: "The pattern '一个...也没有' means 'not even one' or 'not a single'. The '也' emphasizes the complete absence. It's a strong way to say you don't have any at all."
+    },
+    {
+        chinese: "\u8BED\u6CD5\u4E0D\u662F\u5F88\u96BE\uFF0C\u4F46\u662F\u53D1\u97F3\u5F88\u96BE\u3002",
+        pinyin: "Y\u01D4f\u01CE b\u00FAsh\u00EC h\u011Bn n\u00E1n, d\u00E0nsh\u00EC f\u0101y\u012Bn h\u011Bn n\u00E1n.",
+        english: "Grammar is not very difficult, but pronunciation is difficult.",
+        vocabulary: [
+            { hanzi: "\u8BED\u6CD5", pinyin: "y\u01D4f\u01CE", meaning: "grammar" },
+            { hanzi: "\u4E0D\u662F\u5F88", pinyin: "b\u00FAsh\u00EC h\u011Bn", meaning: "not very" },
+            { hanzi: "\u96BE", pinyin: "n\u00E1n", meaning: "difficult, hard" },
+            { hanzi: "\u4F46\u662F", pinyin: "d\u00E0nsh\u00EC", meaning: "but, however" },
+            { hanzi: "\u53D1\u97F3", pinyin: "f\u0101y\u012Bn", meaning: "pronunciation" },
+            { hanzi: "\u5F88", pinyin: "h\u011Bn", meaning: "very" }
+        ],
+        grammarNote: "'不是很' is a softer negation meaning 'not very' rather than an absolute 'not'. '但是' connects two contrasting clauses. This structure is useful for making comparisons or contrasts."
+    },
+    {
+        chinese: "\u4ED6\u4EEC\u8BF4\u5F97\u592A\u5FEB\u4E86\u3002",
+        pinyin: "T\u0101men shu\u014D de t\u00E0i ku\u00E0ile.",
+        english: "They speak too fast.",
+        vocabulary: [
+            { hanzi: "\u4ED6\u4EEC", pinyin: "t\u0101men", meaning: "they, them" },
+            { hanzi: "\u8BF4", pinyin: "shu\u014D", meaning: "to speak, to say" },
+            { hanzi: "\u5F97", pinyin: "de", meaning: "particle indicating degree/result" },
+            { hanzi: "\u592A", pinyin: "t\u00E0i", meaning: "too, excessively" },
+            { hanzi: "\u5FEB", pinyin: "ku\u00E0i", meaning: "fast, quick" },
+            { hanzi: "\u4E86", pinyin: "le", meaning: "particle indicating change/excessive degree" }
+        ],
+        grammarNote: "The pattern 'verb + 得 + adjective' describes how an action is performed. '太...了' means 'too...' expressing that something is excessive. Together, '说得太快了' means 'speak too fast'."
+    },
+    {
+        chinese: "\u4F60\u8BF4\u5F97\u6BD4\u6211\u597D\u591A\u4E86\u3002",
+        pinyin: "N\u01D0 shu\u014D de b\u01D0 w\u01D2 h\u01CEodu\u014Dle.",
+        english: "You speak much better than I do.",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u8BF4", pinyin: "shu\u014D", meaning: "to speak" },
+            { hanzi: "\u5F97", pinyin: "de", meaning: "particle indicating result/degree" },
+            { hanzi: "\u6BD4", pinyin: "b\u01D0", meaning: "than, compared to" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u597D\u591A\u4E86", pinyin: "h\u01CEodu\u014Dle", meaning: "much better" }
+        ],
+        grammarNote: "The pattern '比 + noun/pronoun' is used for comparisons. '好多了' means 'much better'. The structure 'A 比 B + adjective' means 'A is more [adjective] than B'."
+    },
+    {
+        chinese: "\u8FD9\u7BC7\u6587\u7AE0\u8FD8\u86EE\u6709\u610F\u601D\u7684\u3002",
+        pinyin: "Zh\u00E8 pi\u0101n w\u00E9nzh\u0101ng h\u00E1i m\u00E1n y\u01D2uy\u00ECsi de.",
+        english: "This article is quite interesting.",
+        vocabulary: [
+            { hanzi: "\u8FD9\u7BC7", pinyin: "zh\u00E8 pi\u0101n", meaning: "this (measure word for articles/essays)" },
+            { hanzi: "\u6587\u7AE0", pinyin: "w\u00E9nzh\u0101ng", meaning: "article, essay" },
+            { hanzi: "\u8FD8", pinyin: "h\u00E1i", meaning: "quite, fairly" },
+            { hanzi: "\u86EE", pinyin: "m\u00E1n", meaning: "quite, pretty (colloquial)" },
+            { hanzi: "\u6709\u610F\u601D", pinyin: "y\u01D2uy\u00ECsi", meaning: "interesting, fun" },
+            { hanzi: "\u7684", pinyin: "de", meaning: "particle (emphasis)" }
+        ],
+        grammarNote: "'还蛮' is a colloquial way to say 'quite' or 'pretty'. '有意思' literally means 'have meaning' but is used to say something is interesting or fun. The final '的' adds emphasis."
+    },
+    {
+        chinese: "\u8FD9\u4E2A\u6211\u4E0D\u592A\u6E05\u695A\u3002",
+        pinyin: "Zh\u00E8ge w\u01D2 b\u00FA t\u00E0i q\u012Bngch\u01D4.",
+        english: "I'm not sure about this.",
+        vocabulary: [
+            { hanzi: "\u8FD9\u4E2A", pinyin: "zh\u00E8ge", meaning: "this" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u4E0D\u592A", pinyin: "b\u00FA t\u00E0i", meaning: "not very, not quite" },
+            { hanzi: "\u6E05\u695A", pinyin: "q\u012Bngch\u01D4", meaning: "clear, sure" }
+        ],
+        grammarNote: "'不太清楚' is a polite way to say you're not sure or don't know something clearly. It's softer than saying '不知道' (don't know). The word order places the topic '这个' at the beginning."
+    },
+    {
+        chinese: "\u4F60\u77E5\u9053\u6211\u7684\u610F\u601D\u5417\uFF1F",
+        pinyin: "N\u01D0 zh\u012Bd\u00E0o w\u01D2 de y\u00ECsi ma?",
+        english: "Do you know what I mean?",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u77E5\u9053", pinyin: "zh\u012Bd\u00E0o", meaning: "to know, to understand" },
+            { hanzi: "\u6211\u7684", pinyin: "w\u01D2 de", meaning: "my" },
+            { hanzi: "\u610F\u601D", pinyin: "y\u00ECsi", meaning: "meaning, intention" },
+            { hanzi: "\u5417", pinyin: "ma", meaning: "question particle" }
+        ],
+        grammarNote: "This is a common phrase to check if someone understands you. '意思' means 'meaning' or 'what someone means'. '吗' at the end turns the statement into a yes/no question."
+    },
+    {
+        chinese: "\u6211\u5E74\u8F7B\u7684\u65F6\u5019\u53BB\u8FC7\u4E2D\u56FD\u3002",
+        pinyin: "W\u01D2 ni\u00E1nq\u012Bng de sh\u00EDh\u00F2u q\u00F9gu\u00F2 zh\u014Dnggu\u00F3.",
+        english: "I have been to China when I was young.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5E74\u8F7B", pinyin: "ni\u00E1nq\u012Bng", meaning: "young" },
+            { hanzi: "\u7684\u65F6\u5019", pinyin: "de sh\u00EDh\u00F2u", meaning: "when, at the time of" },
+            { hanzi: "\u53BB\u8FC7", pinyin: "q\u00F9gu\u00F2", meaning: "have been to (past experience)" },
+            { hanzi: "\u4E2D\u56FD", pinyin: "zh\u014Dnggu\u00F3", meaning: "China" }
+        ],
+        grammarNote: "'的时候' means 'when' or 'at the time of'. '去过' uses '过' to indicate past experience - that you've been somewhere before. This differs from '去了' which just indicates you went somewhere."
+    },
+    {
+        chinese: "\u6211\u4ECE\u6765\u6CA1\u53BB\u8FC7\u3002",
+        pinyin: "W\u01D2 c\u00F3ngl\u00E1i m\u00E9i q\u00F9gu\u00F2.",
+        english: "I have never been (to somewhere).",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u4ECE\u6765", pinyin: "c\u00F3ngl\u00E1i", meaning: "never, always (with negation)" },
+            { hanzi: "\u6CA1", pinyin: "m\u00E9i", meaning: "not, haven't" },
+            { hanzi: "\u53BB\u8FC7", pinyin: "q\u00F9gu\u00F2", meaning: "have been to" }
+        ],
+        grammarNote: "'从来没' or '从来不' means 'never' or 'have never'. It emphasizes that something has never happened from the beginning until now. '去过' with '没' becomes 'have never been to'."
+    },
+    {
+        chinese: "\u6211\u53EF\u4EE5\u8BD5\u4E00\u4E0B\u5417\uFF1F",
+        pinyin: "W\u01D2 k\u011By\u01D0 sh\u00EC y\u00EDxi\u00E0 ma?",
+        english: "May I give it a try?",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u53EF\u4EE5", pinyin: "k\u011By\u01D0", meaning: "can, may" },
+            { hanzi: "\u8BD5", pinyin: "sh\u00EC", meaning: "to try, to test" },
+            { hanzi: "\u4E00\u4E0B", pinyin: "y\u00EDxi\u00E0", meaning: "a bit, briefly" },
+            { hanzi: "\u5417", pinyin: "ma", meaning: "question particle" }
+        ],
+        grammarNote: "'试一下' means 'try it briefly' or 'give it a try'. The '一下' softens the request. This is a polite way to ask permission to try something."
+    },
+    {
+        chinese: "\u8BA9\u6211\u60F3\u4E00\u60F3\u3002",
+        pinyin: "R\u00E0ng w\u01D2 xi\u01CEng y\u00EC xi\u01CEng.",
+        english: "Let me think./I'm trying to think.",
+        vocabulary: [
+            { hanzi: "\u8BA9", pinyin: "r\u00E0ng", meaning: "to let, to allow" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u60F3\u4E00\u60F3", pinyin: "xi\u01CEng y\u00EC xi\u01CEng", meaning: "think for a bit" }
+        ],
+        grammarNote: "'让' means 'let' or 'allow'. The pattern 'verb + 一 + verb' (like 想一想) indicates doing the action briefly or casually. It softens the tone and suggests a quick action."
+    },
+    {
+        chinese: "\u4F60\u8FD8\u6709\u4EC0\u4E48\u60F3\u8BF4\u7684\u5417\uFF1F",
+        pinyin: "N\u01D0 h\u00E1i y\u01D2u sh\u00E9nme xi\u01CEng shu\u014D de ma?",
+        english: "Do you have anything else to say?",
+        vocabulary: [
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u8FD8", pinyin: "h\u00E1i", meaning: "still, also, else" },
+            { hanzi: "\u6709", pinyin: "y\u01D2u", meaning: "have" },
+            { hanzi: "\u4EC0\u4E48", pinyin: "sh\u00E9nme", meaning: "what, anything" },
+            { hanzi: "\u60F3\u8BF4\u7684", pinyin: "xi\u01CEng shu\u014D de", meaning: "want to say" },
+            { hanzi: "\u5417", pinyin: "ma", meaning: "question particle" }
+        ],
+        grammarNote: "'还有' means 'still have' or 'also have'. The pattern 'verb + 的' (想说的) turns the verb phrase into a noun phrase, meaning 'things you want to say'. '还' here means 'else' or 'more'."
+    },
+    {
+        chinese: "\u5DEE\u4E0D\u591A\u5C31\u8FD9\u6837\u3002",
+        pinyin: "Ch\u00E0b\u00F9du\u014D ji\u00F9 zh\u00E8y\u00E0ng.",
+        english: "That's about it.",
+        vocabulary: [
+            { hanzi: "\u5DEE\u4E0D\u591A", pinyin: "ch\u00E0b\u00F9du\u014D", meaning: "almost, about" },
+            { hanzi: "\u5C31", pinyin: "ji\u00F9", meaning: "just, only" },
+            { hanzi: "\u8FD9\u6837", pinyin: "zh\u00E8y\u00E0ng", meaning: "like this, this way" }
+        ],
+        grammarNote: "'差不多' means 'almost' or 'about'. '就这样' means 'just like this' or 'that's it'. Together, this phrase is used to conclude or summarize, meaning 'that's pretty much it' or 'that's about all'."
+    },
+    {
+        chinese: "\u6211\u60F3\u544A\u8BC9\u4F60\u4E00\u4EF6\u4E8B\u3002",
+        pinyin: "W\u01D2 xi\u01CEng g\u00E0os\u00F9 n\u01D0 y\u012B ji\u00E0n sh\u00EC.",
+        english: "I want to tell you something.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u60F3", pinyin: "xi\u01CEng", meaning: "to want, to think" },
+            { hanzi: "\u544A\u8BC9", pinyin: "g\u00E0os\u00F9", meaning: "to tell" },
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u4E00\u4EF6\u4E8B", pinyin: "y\u012B ji\u00E0n sh\u00EC", meaning: "one thing, something" }
+        ],
+        grammarNote: "'一件事' literally means 'one piece of matter/thing'. '件' is the measure word for matters or affairs. This is a common way to say 'something' or 'a matter' in Chinese."
+    },
+    {
+        chinese: "\u6211\u5F85\u4F1A\u513F\u7ED9\u4F60\u6253\u7535\u8BDD\u3002",
+        pinyin: "W\u01D2 d\u0101i hu\u01D0 er g\u011Bi n\u01D0 d\u01CE di\u00E0nhu\u00E0.",
+        english: "I'll call you later.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5F85\u4F1A\u513F", pinyin: "d\u0101i hu\u01D0 er", meaning: "in a moment, later" },
+            { hanzi: "\u7ED9", pinyin: "g\u011Bi", meaning: "to give, to (indirect object)" },
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u6253\u7535\u8BDD", pinyin: "d\u01CE di\u00E0nhu\u00E0", meaning: "to make a phone call" }
+        ],
+        grammarNote: "'待会儿' is a colloquial way to say 'in a bit' or 'later'. '给你打电话' literally means 'give you make phone call', where '给' indicates the recipient. '打电话' is the standard verb for calling someone."
+    },
+    {
+        chinese: "\u6211\u5230\u65F6\u5019\u7ED9\u4F60\u53D1\u5FAE\u4FE1\u3002",
+        pinyin: "W\u01D2 d\u00E0o sh\u00EDh\u00F2u g\u011Bi n\u01D0 f\u0101 w\u0113ix\u00ECn.",
+        english: "I will send you a WeChat message later.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5230\u65F6\u5019", pinyin: "d\u00E0o sh\u00EDh\u00F2u", meaning: "when the time comes, at that time" },
+            { hanzi: "\u7ED9", pinyin: "g\u011Bi", meaning: "to give, to (indirect object)" },
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u53D1", pinyin: "f\u0101", meaning: "to send" },
+            { hanzi: "\u5FAE\u4FE1", pinyin: "w\u0113ix\u00ECn", meaning: "WeChat" }
+        ],
+        grammarNote: "'到时候' means 'when the time comes' or 'at that time'. It refers to a specific time in the future. '发微信' means 'send a WeChat message', where '发' is the verb for sending messages or posts."
+    },
+    {
+        chinese: "\u8FD9\u4E2A\u661F\u671F\u6211\u5FD9\u6B7B\u4E86\u3002",
+        pinyin: "Zh\u00E8ge x\u012Bngq\u012B w\u01D2 m\u00E1ng s\u01D0le.",
+        english: "I've been buried with work this week.",
+        vocabulary: [
+            { hanzi: "\u8FD9\u4E2A", pinyin: "zh\u00E8ge", meaning: "this" },
+            { hanzi: "\u661F\u671F", pinyin: "x\u012Bngq\u012B", meaning: "week" },
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5FD9", pinyin: "m\u00E1ng", meaning: "busy" },
+            { hanzi: "\u6B7B\u4E86", pinyin: "s\u01D0le", meaning: "extremely (literally 'to death')" }
+        ],
+        grammarNote: "'忙死了' literally means 'busy to death' and is used to express being extremely busy. The pattern 'adjective + 死了' is a common way to intensify adjectives, similar to saying 'extremely' or 'to death' in English."
+    },
+    {
+        chinese: "\u6211\u5F00\u8F66\u53BB\u63A5\u4F60\u5427\u3002",
+        pinyin: "W\u01D2 k\u0101ich\u0113 q\u00F9 ji\u0113 n\u01D0 ba.",
+        english: "I'll pick you up by car.",
+        vocabulary: [
+            { hanzi: "\u6211", pinyin: "w\u01D2", meaning: "I, me" },
+            { hanzi: "\u5F00\u8F66", pinyin: "k\u0101ich\u0113", meaning: "to drive (a car)" },
+            { hanzi: "\u53BB", pinyin: "q\u00F9", meaning: "to go" },
+            { hanzi: "\u63A5", pinyin: "ji\u0113", meaning: "to pick up, to meet" },
+            { hanzi: "\u4F60", pinyin: "n\u01D0", meaning: "you" },
+            { hanzi: "\u5427", pinyin: "ba", meaning: "particle (suggestion)" }
+        ],
+        grammarNote: "'开车' literally means 'drive car'. '去接你' means 'go pick you up'. The final '吧' is a particle that softens the statement into a suggestion, like saying 'let me' or 'I'll' in a friendly way."
+    }
+];
+
+// Progress tracking with localStorage
+var learnedCards = JSON.parse(localStorage.getItem('learnedCards') || '{}');
+var currentFilter = 'all'; // 'all', 'unlearned', 'learned'
+var filteredIndices = [];
+
+var currentIndex = 0;
+var isFlipped = false;
+var showVocab = false;
+
+var flashcard    = document.getElementById('flashcard');
+var cardLabel    = document.getElementById('cardLabel');
+var cardMain     = document.getElementById('cardMain');
+var cardHint     = document.getElementById('cardHint');
+var cardSelect   = document.getElementById('cardSelect');
+var prevBtn      = document.getElementById('prevBtn');
+var nextBtn      = document.getElementById('nextBtn');
+var vocabBtn     = document.getElementById('vocabBtn');
+var vocabSection = document.getElementById('vocabSection');
+var vocabItems   = document.getElementById('vocabItems');
+var grammarNote  = document.getElementById('grammarNote');
+var learnedToggle = document.getElementById('learnedToggle');
+var progressFill  = document.getElementById('progressFill');
+var progressText  = document.getElementById('progressText');
+var filterAll     = document.getElementById('filterAll');
+var filterUnlearned = document.getElementById('filterUnlearned');
+var filterLearned = document.getElementById('filterLearned');
+
+function getCardId(index) {
+    return cards[index].chinese;
+}
+
+function isCardLearned(index) {
+    return learnedCards[getCardId(index)] === true;
+}
+
+function toggleCardLearned(index) {
+    var cardId = getCardId(index);
+    if (learnedCards[cardId]) {
+        delete learnedCards[cardId];
+    } else {
+        learnedCards[cardId] = true;
+    }
+    localStorage.setItem('learnedCards', JSON.stringify(learnedCards));
+    updateProgress();
+}
+
+function updateProgress() {
+    var learned = Object.keys(learnedCards).length;
+    var total = cards.length;
+    var percent = (learned / total) * 100;
+    progressFill.style.width = percent + '%';
+    progressText.textContent = learned + ' / ' + total + ' learned';
+}
+
+function updateFilteredIndices() {
+    filteredIndices = [];
+    for (var i = 0; i < cards.length; i++) {
+        if (currentFilter === 'all') {
+            filteredIndices.push(i);
+        } else if (currentFilter === 'unlearned' && !isCardLearned(i)) {
+            filteredIndices.push(i);
+        } else if (currentFilter === 'learned' && isCardLearned(i)) {
+            filteredIndices.push(i);
+        }
+    }
+    
+    // Reset to first card in filtered list
+    if (filteredIndices.length > 0) {
+        currentIndex = 0;
+    }
+    
+    // Update dropdown
+    cardSelect.innerHTML = '';
+    filteredIndices.forEach(function(realIndex, displayIndex) {
+        var opt = document.createElement('option');
+        opt.value = displayIndex;
+        var learned = isCardLearned(realIndex) ? ' ✓' : '';
+        opt.textContent = 'Card ' + (displayIndex + 1) + ' of ' + filteredIndices.length + learned;
+        cardSelect.appendChild(opt);
+    });
+}
+
+function getCurrentRealIndex() {
+    return filteredIndices[currentIndex] || 0;
+}
+
+function render() {
+    var realIndex = getCurrentRealIndex();
+    var card = cards[realIndex];
+    var learned = isCardLearned(realIndex);
+    
+    cardSelect.value = currentIndex;
+    flashcard.classList.toggle('flipped', isFlipped);
+
+    if (!isFlipped) {
+        cardLabel.textContent = 'FRONT';
+        cardMain.innerHTML = '<div class="card-english">' + card.english + '</div>';
+        cardHint.textContent = 'Click or swipe to flip';
+    } else {
+        cardLabel.textContent = 'BACK';
+        cardMain.innerHTML = '<div class="card-chinese">' + card.chinese + '</div><div class="card-pinyin">' + card.pinyin + '</div>';
+        cardHint.textContent = 'Click or swipe to flip back';
+    }
+
+    // Update learned toggle button
+    if (learned) {
+        learnedToggle.textContent = '↩ Mark as Unlearned';
+        learnedToggle.classList.add('learned');
+    } else {
+        learnedToggle.textContent = '✓ Mark as Learned';
+        learnedToggle.classList.remove('learned');
+    }
+
+    vocabSection.classList.toggle('visible', showVocab);
+    vocabBtn.textContent = (showVocab ? '\uD83D\uDCDA Hide' : '\uD83D\uDCDA Show') + ' Vocabulary Notes';
+
+    if (showVocab) {
+        vocabItems.innerHTML = card.vocabulary.map(function(v) {
+            return '<div class="vocab-item"><span class="vocab-hanzi">' + v.hanzi + '</span> <span class="vocab-pinyin">(' + v.pinyin + ')</span><span class="vocab-meaning"> = ' + v.meaning + '</span></div>';
+        }).join('');
+        grammarNote.innerHTML = '<strong>&#128161; Grammar Tip:</strong> ' + card.grammarNote;
+    }
+}
+
+function goTo(index) {
+    if (filteredIndices.length === 0) return;
+    currentIndex = ((index % filteredIndices.length) + filteredIndices.length) % filteredIndices.length;
+    isFlipped = false;
+    showVocab = false;
+    render();
+}
+
+function setFilter(filter) {
+    currentFilter = filter;
+    filterAll.classList.toggle('active', filter === 'all');
+    filterUnlearned.classList.toggle('active', filter === 'unlearned');
+    filterLearned.classList.toggle('active', filter === 'learned');
+    updateFilteredIndices();
+    render();
+}
+
+// Event listeners
+learnedToggle.addEventListener('click', function() {
+    toggleCardLearned(getCurrentRealIndex());
+    updateFilteredIndices();
+    
+    // If filtering unlearned and we just marked this as learned, go to next card
+    if (currentFilter === 'unlearned' && filteredIndices.length > 0) {
+        // Stay on same position (which now shows next unlearned card)
+        if (currentIndex >= filteredIndices.length) {
+            currentIndex = Math.max(0, filteredIndices.length - 1);
+        }
+    }
+    
+    render();
+});
+
+filterAll.addEventListener('click', function() { setFilter('all'); });
+filterUnlearned.addEventListener('click', function() { setFilter('unlearned'); });
+filterLearned.addEventListener('click', function() { setFilter('learned'); });
+
+// Click handled by touch on mobile; keep for desktop mouse clicks only
+flashcard.addEventListener('click', function(e) {
+    // Only fire on genuine mouse clicks, not touch-triggered synthetic clicks
+    if (e.sourceCapabilities && !e.sourceCapabilities.firesTouchEvents) {
+        isFlipped = !isFlipped;
+        render();
+    } else if (!e.sourceCapabilities) {
+        // Fallback for browsers that don't support sourceCapabilities
+        isFlipped = !isFlipped;
+        render();
+    }
+});
+prevBtn.addEventListener('click', function() { goTo(currentIndex - 1); });
+nextBtn.addEventListener('click', function() { goTo(currentIndex + 1); });
+cardSelect.addEventListener('change', function(e) { goTo(Number(e.target.value)); });
+vocabBtn.addEventListener('click', function() { showVocab = !showVocab; render(); });
+
+var touchStartX = null;
+var touchStartY = null;
+var touchEndX = null;
+var touchEndY = null;
+var touchMoved = false;
+var MIN_SWIPE = 40;
+
+flashcard.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+    touchEndX = touchStartX;
+    touchEndY = touchStartY;
+    touchMoved = false;
+}, { passive: true });
+
+flashcard.addEventListener('touchmove', function(e) {
+    touchEndX = e.changedTouches[0].clientX;
+    touchEndY = e.changedTouches[0].clientY;
+    touchMoved = true;
+}, { passive: true });
+
+flashcard.addEventListener('touchend', function(e) {
+    if (touchStartX === null) return;
+
+    var distX = touchStartX - touchEndX;
+    var distY = touchStartY - touchEndY;
+
+    // If barely moved, treat as a tap -> flip
+    if (!touchMoved || (Math.abs(distX) < MIN_SWIPE && Math.abs(distY) < MIN_SWIPE)) {
+        isFlipped = !isFlipped;
+        render();
+    } else if (Math.abs(distX) >= MIN_SWIPE && Math.abs(distX) > Math.abs(distY)) {
+        // Horizontal swipe -> navigate
+        if (distX > 0) goTo(currentIndex + 1);
+        else goTo(currentIndex - 1);
+    }
+    // Vertical swipe -> do nothing (allow page scroll)
+
+    touchStartX = null; touchStartY = null;
+    touchEndX = null; touchEndY = null;
+    touchMoved = false;
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+    else if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
+    else if (e.key === ' ' || e.key === 'Enter') { isFlipped = !isFlipped; render(); }
+});
+
+// Initialize
+updateProgress();
+updateFilteredIndices();
+render();
+</script>
+</body>
+</html>
