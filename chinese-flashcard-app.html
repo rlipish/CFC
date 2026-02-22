@@ -704,6 +704,7 @@ var touchEndX = null;
 var touchEndY = null;
 var touchMoved = false;
 var touchHandled = false;
+var touchStartTime = 0;
 var MIN_SWIPE = 40;
 
 flashcard.addEventListener('touchstart', function(e) {
@@ -713,12 +714,14 @@ flashcard.addEventListener('touchstart', function(e) {
     touchEndY = touchStartY;
     touchMoved = false;
     touchHandled = false;
+    touchStartTime = Date.now();
 }, { passive: true });
 
 flashcard.addEventListener('touchmove', function(e) {
     touchEndX = e.changedTouches[0].clientX;
     touchEndY = e.changedTouches[0].clientY;
-    touchMoved = true;
+    var moved = Math.abs(touchEndX - touchStartX) > 5 || Math.abs(touchEndY - touchStartY) > 5;
+    if (moved) touchMoved = true;
 }, { passive: true });
 
 flashcard.addEventListener('touchend', function(e) {
@@ -726,37 +729,39 @@ flashcard.addEventListener('touchend', function(e) {
 
     var distX = touchStartX - touchEndX;
     var distY = touchStartY - touchEndY;
+    var touchDuration = Date.now() - touchStartTime;
 
-    // If barely moved, treat as a tap -> flip
-    if (!touchMoved || (Math.abs(distX) < MIN_SWIPE && Math.abs(distY) < MIN_SWIPE)) {
+    // If barely moved and quick tap, treat as a tap -> flip
+    if (!touchMoved && touchDuration < 500 && (Math.abs(distX) < MIN_SWIPE && Math.abs(distY) < MIN_SWIPE)) {
+        e.preventDefault(); // CRITICAL for iOS
         isFlipped = !isFlipped;
         render();
         touchHandled = true;
-        // Reset touchHandled after a delay to prevent click event
-        setTimeout(function() { touchHandled = false; }, 400);
-    } else if (Math.abs(distX) >= MIN_SWIPE && Math.abs(distX) > Math.abs(distY)) {
+        setTimeout(function() { touchHandled = false; }, 600);
+    } else if (touchMoved && Math.abs(distX) >= MIN_SWIPE && Math.abs(distX) > Math.abs(distY)) {
         // Horizontal swipe -> navigate
+        e.preventDefault();
         if (distX > 0) goTo(currentIndex + 1);
         else goTo(currentIndex - 1);
         touchHandled = true;
-        setTimeout(function() { touchHandled = false; }, 400);
+        setTimeout(function() { touchHandled = false; }, 600);
     }
-    // Vertical swipe -> do nothing (allow page scroll)
 
     touchStartX = null; touchStartY = null;
     touchEndX = null; touchEndY = null;
     touchMoved = false;
-});
+}, { passive: false }); // NOT passive so we can preventDefault
 
-// Handle click events (desktop only - block on mobile)
+// Handle click events (desktop only)
 flashcard.addEventListener('click', function(e) {
-    // If touch was just handled, ignore this click (prevents double-flip on iOS)
-    if (touchHandled) {
+    // Block ALL clicks that happen soon after touch
+    if (touchHandled || Date.now() - touchStartTime < 600) {
         e.preventDefault();
-        return;
+        e.stopPropagation();
+        return false;
     }
     
-    // Desktop mouse click
+    // Desktop mouse click only
     isFlipped = !isFlipped;
     render();
 }, false);
