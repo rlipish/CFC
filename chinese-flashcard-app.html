@@ -117,13 +117,6 @@
     <div class="header">
         <div class="title">&#127924; Chinese Flashcards</div>
         
-        <div class="progress-bar">
-            <div class="progress-bar-inner">
-                <div class="progress-bar-fill" id="progressFill"></div>
-                <div class="progress-text" id="progressText">0 / 26 learned</div>
-            </div>
-        </div>
-        
         <div class="filter-buttons">
             <button class="filter-btn active" id="filterAll">All Cards</button>
             <button class="filter-btn" id="filterUnlearned">Unlearned</button>
@@ -541,8 +534,6 @@ var vocabSection = document.getElementById('vocabSection');
 var vocabItems   = document.getElementById('vocabItems');
 var grammarNote  = document.getElementById('grammarNote');
 var learnedToggle = document.getElementById('learnedToggle');
-var progressFill  = document.getElementById('progressFill');
-var progressText  = document.getElementById('progressText');
 var filterAll     = document.getElementById('filterAll');
 var filterUnlearned = document.getElementById('filterUnlearned');
 var filterLearned = document.getElementById('filterLearned');
@@ -563,15 +554,6 @@ function toggleCardLearned(index) {
         learnedCards[cardId] = true;
     }
     localStorage.setItem('learnedCards', JSON.stringify(learnedCards));
-    updateProgress();
-}
-
-function updateProgress() {
-    var learned = Object.keys(learnedCards).length;
-    var total = cards.length;
-    var percent = (learned / total) * 100;
-    progressFill.style.width = percent + '%';
-    progressText.textContent = learned + ' / ' + total + ' learned';
 }
 
 function updateFilteredIndices() {
@@ -663,17 +645,32 @@ function setFilter(filter) {
 
 // Event listeners
 learnedToggle.addEventListener('click', function() {
-    toggleCardLearned(getCurrentRealIndex());
+    var currentRealIndex = getCurrentRealIndex();
+    toggleCardLearned(currentRealIndex);
+    
+    // Save the current filter before updating
+    var wasFiltering = currentFilter;
     updateFilteredIndices();
     
-    // If filtering unlearned and we just marked this as learned, go to next card
-    if (currentFilter === 'unlearned' && filteredIndices.length > 0) {
-        // Stay on same position (which now shows next unlearned card)
+    // Advance to next card and show front
+    if (filteredIndices.length > 0) {
+        // If we're at the end, wrap to beginning
         if (currentIndex >= filteredIndices.length) {
-            currentIndex = Math.max(0, filteredIndices.length - 1);
+            currentIndex = 0;
+        }
+        // If current position is valid, just advance
+        else if (currentIndex < filteredIndices.length - 1) {
+            currentIndex = currentIndex + 1;
+        }
+        // At last card, wrap to first
+        else {
+            currentIndex = 0;
         }
     }
     
+    // Always show front of next card
+    isFlipped = false;
+    showVocab = false;
     render();
 });
 
@@ -773,7 +770,6 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Initialize
-updateProgress();
 updateFilteredIndices();
 render();
 </script>
