@@ -82,7 +82,7 @@
         .vocab-meaning { color: #2d3436; }
         .grammar-note { margin-top: 14px; padding: 14px; background: #e3f2fd; border-radius: 8px; font-size: 14px; line-height: 1.6; color: #333; }
         
-        .settings-btn { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: #1565c0; color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; transition: transform 0.2s; }
+        .settings-btn { position: fixed; top: 20px; left: 20px; width: 56px; height: 56px; border-radius: 50%; background: #1565c0; color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; transition: transform 0.2s; }
         .settings-btn:active { transform: scale(0.95); }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1001; justify-content: center; align-items: center; }
@@ -897,24 +897,20 @@ learnedToggle.addEventListener('click', function() {
     var currentRealIndex = getCurrentRealIndex();
     toggleCardLearned(currentRealIndex);
     
-    // Save the current filter before updating
-    var wasFiltering = currentFilter;
+    // Update filtered list
     updateFilteredIndices();
     
-    // Advance to next card and show front
+    // Move to next card in the current filtered view
+    // Stay at same position index (which will show the next card after removal, or wrap)
     if (filteredIndices.length > 0) {
-        // If we're at the end, wrap to beginning
+        // If we're past the end after filtering, go to last card
         if (currentIndex >= filteredIndices.length) {
-            currentIndex = 0;
+            currentIndex = filteredIndices.length - 1;
         }
-        // If current position is valid, just advance
-        else if (currentIndex < filteredIndices.length - 1) {
-            currentIndex = currentIndex + 1;
-        }
-        // At last card, wrap to first
-        else {
-            currentIndex = 0;
-        }
+        // Otherwise stay at current position (shows next card naturally)
+    } else {
+        // No cards left in filter, reset
+        currentIndex = 0;
     }
     
     // Always show front of next card
