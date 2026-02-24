@@ -897,19 +897,37 @@ learnedToggle.addEventListener('click', function() {
     var currentRealIndex = getCurrentRealIndex();
     toggleCardLearned(currentRealIndex);
     
-    // Update filtered list
+    // Find the next real card index in the original array
+    var nextRealIndex = currentRealIndex + 1;
+    
+    // Update filtered list with new learned status
     updateFilteredIndices();
     
-    // Move to next card in the current filtered view
-    // Stay at same position index (which will show the next card after removal, or wrap)
+    // Find where this next card appears in the NEW filtered list
     if (filteredIndices.length > 0) {
-        // If we're past the end after filtering, go to last card
-        if (currentIndex >= filteredIndices.length) {
-            currentIndex = filteredIndices.length - 1;
+        var foundIndex = -1;
+        
+        // Try to find the next card in the filtered list
+        for (var i = 0; i < filteredIndices.length; i++) {
+            if (filteredIndices[i] === nextRealIndex) {
+                foundIndex = i;
+                break;
+            }
         }
-        // Otherwise stay at current position (shows next card naturally)
+        
+        // If next card is in the filtered list, go to it
+        if (foundIndex !== -1) {
+            currentIndex = foundIndex;
+        }
+        // Otherwise, stay at current position or wrap to start
+        else {
+            // If current position is still valid, stay there
+            if (currentIndex >= filteredIndices.length) {
+                currentIndex = 0; // Wrap to beginning
+            }
+            // else stay at currentIndex (shows whatever card is now at that position)
+        }
     } else {
-        // No cards left in filter, reset
         currentIndex = 0;
     }
     
