@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chinese-flashcards-v2';
+const CACHE_NAME = 'chinese-flashcards-v3';
 const urlsToCache = [
   './chinese-flashcard-app.html',
   './manifest.json'
