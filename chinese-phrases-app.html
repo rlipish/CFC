@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="description" content="Study Chinese with interactive flashcards">
+    <link rel="manifest" href="./manifest-phrases.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Flashcards">
+    <title>Chinese Phrases App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        #app { width: 100%; max-width: 600px; }
+
+        .header { text-align: center; margin-bottom: 24px; color: #1565c0; }
+        .title { font-size: 32px; font-weight: bold; margin-bottom: 12px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+
+        .card-selector { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .selector-label { font-size: 16px; font-weight: 500; color: #1565c0; }
+        .dropdown {
+            padding: 8px 14px; font-size: 15px; font-weight: 500;
+            background: white; border: 2px solid #42a5f5; border-radius: 8px;
+            cursor: pointer; color: #1565c0; outline: none; max-width: 220px;
+        }
+
+        .card {
+            width: 100%; min-height: 300px;
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            cursor: pointer; transition: background 0.3s ease;
+            margin-bottom: 16px;
+            user-select: none; -webkit-user-select: none; touch-action: pan-y;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 36px 30px; text-align: center;
+        }
+        .card.flipped { background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); }
+
+        .card-label { font-size: 11px; font-weight: bold; color: #aaa; letter-spacing: 2px; margin-bottom: 18px; }
+        .card-english { font-size: 30px; color: #2d3436; font-weight: 500; line-height: 1.3; }
+        .card-chinese { font-size: 36px; font-weight: bold; color: #2d3436; margin-bottom: 14px; line-height: 1.3; }
+        .card-pinyin { font-size: 26px; font-style: italic; color: #555; line-height: 1.4; }
+        .card-hint { font-size: 13px; color: #ccc; margin-top: 20px; }
+
+        .nav-buttons { display: flex; gap: 14px; margin-bottom: 14px; }
+        .nav-btn {
+            flex: 1; padding: 14px; font-size: 16px; font-weight: bold;
+            background: white; border: none; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15); color: #1565c0;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .nav-btn:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+        .vocab-btn {
+            width: 100%; padding: 14px; font-size: 16px; font-weight: bold;
+            background: white; border: none; border-radius: 12px; cursor: pointer;
+            margin-bottom: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            color: #1565c0; transition: transform 0.1s;
+        }
+        .vocab-btn:active { transform: scale(0.98); }
+
+        .vocab-section { background: white; border-radius: 15px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: none; }
+        .vocab-section.visible { display: block; }
+
+        .vocab-title { font-size: 18px; font-weight: bold; color: #2d3436; margin-bottom: 14px; border-bottom: 3px solid #42a5f5; padding-bottom: 10px; }
+        .vocab-item { padding: 10px 12px; background: #f8f9fa; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #42a5f5; font-size: 15px; line-height: 1.5; }
+        .vocab-hanzi { font-weight: bold; color: #2d3436; font-size: 17px; }
+        .vocab-pinyin { font-style: italic; color: #636e72; margin-left: 4px; }
+        .vocab-meaning { color: #2d3436; }
+        .grammar-note { margin-top: 14px; padding: 14px; background: #e3f2fd; border-radius: 8px; font-size: 14px; line-height: 1.6; color: #333; }
+        
+        .settings-btn { position: fixed; top: 20px; left: 20px; width: 56px; height: 56px; border-radius: 50%; background: #1565c0; color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; transition: transform 0.2s; }
+        .settings-btn:active { transform: scale(0.95); }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1001; justify-content: center; align-items: center; }
+        .modal-overlay.visible { display: flex; }
+        
+        .modal { background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 22px; font-weight: bold; color: #1565c0; margin-bottom: 20px; text-align: center; }
+        .modal-btn { width: 100%; padding: 14px; margin: 8px 0; font-size: 15px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; transition: transform 0.1s; }
+        .modal-btn:active { transform: scale(0.98); }
+        .modal-btn.danger { background: #f44336; color: white; }
+        .modal-btn.primary { background: #1565c0; color: white; }
+        .modal-btn.secondary { background: #e0e0e0; color: #333; }
+        .modal-info { font-size: 13px; color: #666; padding: 12px; background: #f5f5f5; border-radius: 8px; margin: 12px 0; line-height: 1.5; }
+        
+        .progress-bar { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .progress-bar-inner { background: #e0e0e0; border-radius: 8px; height: 24px; overflow: hidden; position: relative; }
+        .progress-bar-fill { background: linear-gradient(90deg, #4CAF50 0%, #81C784 100%); height: 100%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .progress-text { position: absolute; width: 100%; text-align: center; font-size: 13px; font-weight: bold; color: #333; line-height: 24px; }
+        
+        .filter-buttons { display: flex; gap: 8px; margin-bottom: 16px; }
+        .filter-btn { flex: 1; padding: 10px; font-size: 14px; font-weight: 600; background: white; border: 2px solid #42a5f5; border-radius: 10px; cursor: pointer; color: #1565c0; transition: all 0.2s; }
+        .filter-btn.active { background: #42a5f5; color: white; }
+        .filter-btn:active { transform: scale(0.97); }
+        
+        .learned-toggle { background: #4CAF50; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 14px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: all 0.2s; }
+        .learned-toggle.learned { background: #FF9800; }
+        .learned-toggle:active { transform: scale(0.98); }
+        
+        .install-prompt { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; text-align: center; display: none; }
+        .install-prompt.visible { display: block; }
+        .install-btn { background: white; color: #667eea; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        .help-banner { background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
+        .help-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
+        .close-help { background: rgba(255,255,255,0.3); border: none; color: white; padding: 4px 12px; border-radius: 6px; margin-top: 8px; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div id="helpBanner" class="help-banner">
+        <strong>💡 Tip: Add to Home Screen</strong>
+        In Chrome: Tap ⋮ (menu) → "Add to Home screen" to create an app icon!<br>
+        Your learning progress auto-saves.
+        <button class="close-help" id="closeHelp">Got it</button>
+    </div>
+
+    <div class="header">
+        <div class="title">&#127924; Chinese Phrases</div>
+        
+        <div class="filter-buttons">
+            <button class="filter-btn active" id="filterAll">All Cards</button>
+            <button class="filter-btn" id="filterUnlearned">Unlearned</button>
+            <button class="filter-btn" id="filterLearned">Learned</button>
+        </div>
+        
+        <div class="card-selector">
+            <span class="selector-label">Jump to card:</span>
+            <select class="dropdown" id="cardSelect"></select>
+        </div>
+    </div>
+
+    <div class="card" id="flashcard">
+        <div class="card-label" id="cardLabel">FRONT</div>
+        <div id="cardMain"></div>
+        <div class="card-hint" id="cardHint">Click or swipe to flip</div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="nav-btn" id="prevBtn">&#8592; Previous</button>
+        <button class="nav-btn" id="nextBtn">Next &#8594;</button>
+    </div>
+
+    <button class="learned-toggle" id="learnedToggle">✓ Mark as Learned</button>
+
+    <button class="vocab-btn" id="vocabBtn">&#128218; Show Vocabulary Notes</button>
+
+    <div class="vocab-section" id="vocabSection">
+        <div class="vocab-title">Vocabulary Breakdown</div>
+        <div id="vocabItems"></div>
+        <div class="grammar-note" id="grammarNote"></div>
+    </div>
+</div>
+
+<button class="settings-btn" id="settingsBtn">&#9881;</button>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-title">&#9881; Settings</div>
+        
+        <div class="modal-info">
+            <strong>Learned Cards:</strong> <span id="learnedCount">0</span> cards marked as learned
+        </div>
+        
+        <button class="modal-btn danger" id="clearProgressBtn">
+            &#128465; Clear All Progress
+        </button>
+        
+        <button class="modal-btn primary" id="refreshAppBtn">
+            &#8635; Refresh to Latest Version
+        </button>
+        
+        <div class="modal-info" style="font-size: 12px;">
+            <strong>Refresh:</strong> Updates the app to the latest version and clears the cache. Your learned progress will be preserved.
+        </div>
+        
+        <button class="modal-btn secondary" id="closeModalBtn">
+            Close
+        </button>
+    </div>
+</div>
+
+<script>
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker-phrases.js')
+        .then(reg => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed'));
+}
+
+// Note: PWA installation requires HTTPS or localhost server
+// To enable "Add to Home Screen", serve this via HTTP server
+// See run-server.py for instructions
+
+// Help banner
+var helpBanner = document.getElementById('helpBanner');
+var closeHelp = document.getElementById('closeHelp');
+
+if (localStorage.getItem('helpDismissed')) {
+    helpBanner.style.display = 'none';
+}
+
+closeHelp.addEventListener('click', function() {
+    helpBanner.style.display = 'none';
+    localStorage.setItem('helpDismissed', 'true');
+});
+
+// Settings Modal
+var settingsBtn = document.getElementById('settingsBtn');
+var modalOverlay = document.getElementById('modalOverlay');
+var closeModalBtn = document.getElementById('closeModalBtn');
+var clearProgressBtn = document.getElementById('clearProgressBtn');
+var refreshAppBtn = document.getElementById('refreshAppBtn');
+var learnedCountDisplay = document.getElementById('learnedCount');
+
+settingsBtn.addEventListener('click', function() {
+    // Update learned count from storage
+    var currentLearned = JSON.parse(localStorage.getItem('learnedCardsPhrases') || '{}');
+    learnedCountDisplay.textContent = Object.keys(currentLearned).length;
+    modalOverlay.classList.add('visible');
+});
+
+closeModalBtn.addEventListener('click', function() {
+    modalOverlay.classList.remove('visible');
+});
+
+// Close modal when clicking outside
+modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) {
+        modalOverlay.classList.remove('visible');
+    }
+});
+
+clearProgressBtn.addEventListener('click', function() {
+    if (confirm('Are you sure you want to clear all learned progress? This cannot be undone.')) {
+        localStorage.removeItem('learnedCardsPhrases');
+        learnedCards = {};
+        updateFilteredIndices();
+        render();
+        learnedCountDisplay.textContent = '0';
+        alert('All progress has been cleared!');
+        modalOverlay.classList.remove('visible');
+    }
+});
+
+refreshAppBtn.addEventListener('click', function() {
+    if (confirm('This will refresh the app to the latest version. Your learned progress will be preserved. Continue?')) {
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (var i = 0; i < registrations.length; i++) {
+                    registrations[i].unregister();
+                }
+            });
+        }
+        
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (var i = 0; i < names.length; i++) {
+                    caches.delete(names[i]);
+                }
+            });
+        }
+        
+        // Force reload from server
+        setTimeout(function() {
+            window.location.reload(true);
+        }, 500);
+    }
+});
+
+var cards = [
+    {
+        chinese: "\u6211\u60f3\u4e0a\u5ec1\u6240",
+        pinyin: "w\u01d2 xi\u01ceng sh\u00e0ng c\u00e8 su\u01d2",
+        english: "I need to use the restroom."
+    },
+    {
+        chinese: "\u4f60\u5011\u662f\u600e\u9ebc\u8a8d\u8b58\u7684",
+        pinyin: "n\u01d0 men sh\u00ec z\u011bn me r\u00e8n shi de",
+        english: "How did you guys meet?"
+    },
+    {
+        chinese: "\u4f60\u662f\u4e2d\u570b\u54ea\u500b\u5730\u65b9\u7684",
+        pinyin: "n\u01d0 sh\u00ec zh\u014dng gu\u00f3 n\u01ce ge d\u00ec fang de",
+        english: "Which part of China are you from?"
+    },
+    {
+        chinese: "\u4f60\u6709\u5144\u5f1f\u59d0\u59b9\u55ce",
+        pinyin: "n\u01d0 y\u01d2u xi\u014dng d\u00ec ji\u011b m\u00e8i ma",
+        english: "Do you have siblings?"
+    },
+    {
+        chinese: "\u4f60\u5011\u90a3\u5152\u7684\u7279\u8272\u83dc\u662f\u4ec0\u9ebc",
+        pinyin: "n\u01d0 men n\u00e0r de t\u00e8 s\u00e8 c\u00e0i sh\u00ec sh\u00e9n me",
+        english: "What is the specialty dish where you are from?"
+    },
+    {
+        chinese: "\u5b78\u7fd2\u4e2d\u6587\u662f\u6211\u7684\u611b\u597d\u4e4b\u4e00",
+        pinyin: "xu\u00e9 x\u00ed zh\u014dng w\u00e9n sh\u00ec w\u01d2 de \u00e0i h\u00e0o zh\u012b y\u012b",
+        english: "Learning Chinese is one of my hobbies."
+    },
+    {
+        chinese: "\u6211\u65b7\u65b7\u7e8c\u7e8c\u5b78\u4e86\u4e09\u5e74\u4e2d\u6587",
+        pinyin: "w\u01d2 du\u00e0n du\u00e0n x\u00f9 x\u00f9 xu\u00e9 le s\u0101n ni\u00e1n zh\u014dng w\u00e9n",
+        english: "I've been studying Chinese on and off for 3 years."
+    },
+    {
+        chinese: "\u6211\u5f9e\u4f86\u6c92\u6709\u53bb\u904e\u4e2d\u570b",
+        pinyin: "w\u01d2 c\u00f3ng l\u00e1i m\u00e9i y\u01d2u q\u00f9 gu\u00f2 zh\u014dng gu\u00f3",
+        english: "I have never been to China."
+    },
+    {
+        chinese: "\u6211\u4e00\u53e5\u8a71\u90fd\u4e0d\u6703\u8aaa",
+        pinyin: "w\u01d2 y\u012b j\u00f9 hu\u00e0 d\u014du b\u00f9 hu\u00ec shu\u014d",
+        english: "I can't speak a single sentence."
+    },
+    {
+        chinese: "\u4f60\u53ef\u4ee5\u807d\u898b\u6211\u55ce",
+        pinyin: "n\u01d0 k\u011b y\u01d0 t\u012bng ji\u00e0n w\u01d2 ma",
+        english: "Can you hear me?"
+    },
+    {
+        chinese: "\u4f60\u53ef\u4ee5\u770b\u898b\u6211\u55ce",
+        pinyin: "n\u01d0 k\u011b y\u01d0 k\u00e0n ji\u00e0n w\u01d2 ma",
+        english: "Can you see me?"
+    },
+    {
+        chinese: "\u7a0d\u7b49",
+        pinyin: "sh\u0101o d\u011bng",
+        english: "Please wait a moment."
+    },
+    {
+        chinese: " my internet is a bit slow.",
+        pinyin: "\u5c0d\u4e0d\u8d77\uff0c\u6211\u7684\u7db2\u7d61\u6709\u9ede\u6162,\"du\u00ec b\u00f9 q\u01d0, w\u01d2 de w\u01ceng lu\u00f2 y\u01d2u di\u01cen m\u00e0n",
+        english: "Sorry"
+    },
+    {
+        chinese: "\u4f60\u5361\u4e86",
+        pinyin: "n\u01d0 k\u01ce le",
+        english: "You're frozen."
+    },
+    {
+        chinese: " the signal here isn't very good.",
+        pinyin: "\u5c0d\u4e0d\u8d77\uff0c\u9019\u91cc\u4fe1\u865f\u4e0d\u592a\u597d,\"du\u00ec b\u00f9 q\u01d0, zh\u00e8 l\u01d0 x\u00ecn h\u00e0o b\u00f9 t\u00e0i h\u01ceo",
+        english: "Sorry"
+    },
+    {
+        chinese: "\u4e0d\u597d\u610f\u601d\uff0c\u6253\u64fe\u4e00\u4e0b",
+        pinyin: "b\u00f9 h\u01ceo y\u00ec si, d\u01ce r\u01ceo y\u012b xi\u00e0",
+        english: "Sorry to disturb you."
+    },
+    {
+        chinese: " can you speak a bit slower?",
+        pinyin: "\u4e0d\u597d\u610f\u601d\uff0c\u4f60\u53ef\u4ee5\u8aaa\u6162\u4e00\u9ede\u55ce,\"b\u00f9 h\u01ceo y\u00ec si, n\u01d0 k\u011b y\u01d0 shu\u014d m\u00e0n y\u012b di\u01cen ma",
+        english: "Sorry"
+    },
+    {
+        chinese: "\u6211\u9084\u662f\u4e0d\u592a\u61c2",
+        pinyin: "w\u01d2 h\u00e1i sh\u00ec b\u00f9 t\u00e0i d\u01d2ng",
+        english: "I still don't quite understand."
+    },
+    {
+        chinese: "\u4f60\u4ec0\u9ebc\u6642\u5019\u65b9\u4fbf",
+        pinyin: "n\u01d0 sh\u00e9n me sh\u00ed hou f\u0101ng bi\u00e0n",
+        english: "When are you available?"
+    },
+    {
+        chinese: "\u6211\u60f3\u4e00\u4e0b\u518d\u544a\u8a34\u4f60",
+        pinyin: "w\u01d2 xi\u01ceng y\u012b xi\u00e0 z\u00e0i g\u00e0o s\u00f9 n\u01d0",
+        english: "Let me think and I will tell you later."
+    },
+    {
+        chinese: "\u99ac\u4e0a\u56de\u4f86",
+        pinyin: "m\u01ce sh\u00e0ng hu\u00ed l\u00e1i",
+        english: "Be right back."
+    },
+    {
+        chinese: "\u767c\u751f\u4e86\u4ec0\u9ebc",
+        pinyin: "f\u0101 sh\u0113ng le sh\u00e9n me",
+        english: "What happened?"
+    },
+    {
+        chinese: "\u6642\u9593\u5dee\u4e0d\u591a\u4e86",
+        pinyin: "sh\u00ed ji\u0101n ch\u00e0 b\u00f9 du\u014d le",
+        english: "It's about time."
+    },
+    {
+        chinese: "\u4e0d\u600e\u9ebc\u6a23",
+        pinyin: "b\u00f9 z\u011bn me y\u00e0ng",
+        english: "Not so good."
+    },
+    {
+        chinese: "\u6211\u4e00\u4e0b\u5b50\u60f3\u4e0d\u8d77\u4f86\u4e86",
+        pinyin: "w\u01d2 y\u012b xi\u00e0 zi xi\u01ceng b\u00f9 q\u01d0 l\u00e1i le",
+        english: "I can't remember off the top of my head."
+    },
+    {
+        chinese: "\u6700\u8fd1\u6c92\u6709\u4ec0\u9ebc\u7279\u5225\u7684",
+        pinyin: "zu\u00ec j\u00ecn m\u00e9i y\u01d2u sh\u00e9n me t\u00e8 bi\u00e9 de",
+        english: "There's nothing special recently."
+    },
+    {
+        chinese: "\u6700\u8fd1\u6211\u5fd9\u5f97\u4e0d\u5f97\u4e86",
+        pinyin: "zu\u00ec j\u00ecn w\u01d2 m\u00e1ng d\u00e9 b\u00f9 d\u00e9 li\u01ceo",
+        english: "I've been extremely busy lately."
+    },
+    {
+        chinese: "\u6642\u9593\u904e\u5f97\u592a\u5feb\u4e86",
+        pinyin: "sh\u00ed ji\u0101n gu\u00f2 d\u00e9 t\u00e0i ku\u00e0i le",
+        english: "Time flies."
+    },
+    {
+        chinese: "\u6211\u592a\u751f\u4ed6\u7684\u6c23\u4e86",
+        pinyin: "w\u01d2 t\u00e0i sh\u0113ng t\u0101 de q\u00ec le",
+        english: "I'm really mad at him."
+    },
+    {
+        chinese: "\u6211\u9084\u6c92\u51fa\u9580\u5462",
+        pinyin: "w\u01d2 h\u00e1i m\u00e9i ch\u016b m\u00e9n ne",
+        english: "I haven't left home yet."
+    },
+    {
+        chinese: " I will be there soon.",
+        pinyin: "\u5728\u8def\u4e0a\u4e86\uff0c\u99ac\u4e0a\u5230,\"z\u00e0i l\u00f9 sh\u00e0ng le, m\u01ce sh\u00e0ng d\u00e0o",
+        english: "I'm on the way"
+    },
+    {
+        chinese: " please pull over.",
+        pinyin: "\u5e2b\u5085\uff0c\u9ebb\u7169\u9760\u908a\u505c,\"sh\u012b fu, m\u00e1 fan k\u00e0o bi\u0101n t\u00edng",
+        english: "Sir"
+    },
+    {
+        chinese: " please make a U-turn ahead.",
+        pinyin: "\u5e2b\u5085\uff0c\u9ebb\u7169\u524d\u9762\u6389\u982d,\"sh\u012b fu, m\u00e1 fan qi\u00e1n mi\u00e0n di\u00e0o t\u00f3u",
+        english: "Sir"
+    },
+    {
+        chinese: " is this seat taken?",
+        pinyin: "\u8acb\u554f\u9019\u88e1\u6709\u4eba\u5750\u55ce,q\u01d0ng w\u00e8n zh\u00e8 l\u01d0 y\u01d2u r\u00e9n zu\u00f2 ma",
+        english: "Excuse me"
+    },
+    {
+        chinese: "\u6709\u4eba",
+        pinyin: "y\u01d2u r\u00e9n",
+        english: "It's already taken."
+    },
+    {
+        chinese: "\u4f60\u9019 WiFi \u5bc6\u78bc\u662f\u591a\u5c11",
+        pinyin: "n\u01d0 zh\u00e8 WiFi m\u00ec m\u01ce sh\u00ec du\u014d sh\u01ceo",
+        english: "What's the WiFi password here?"
+    },
+    {
+        chinese: "\u4f60\u80fd\u5403\u8fa3\u55ce",
+        pinyin: "n\u01d0 n\u00e9ng ch\u012b l\u00e0 ma",
+        english: "Can you eat spicy food?"
+    },
+    {
+        chinese: "\u54ea\u500b\u98ef\u5e97\u6bd4\u8f03\u6b63\u5b97",
+        pinyin: "n\u01ce ge f\u00e0n di\u00e0n b\u01d0 ji\u00e0o zh\u00e8ng z\u014dng",
+        english: "Which restaurant is more authentic?"
+    },
+    {
+        chinese: " I would like to make a reservation.",
+        pinyin: "\u4f60\u597d\uff0c\u6211\u60f3\u8a02\u4e00\u500b\u4f4d\u7f6e,\"n\u01d0 h\u01ceo, w\u01d2 xi\u01ceng d\u00ec y\u012b g\u00e8 w\u00e8i zh\u00ec",
+        english: "Hello"
+    },
+    {
+        chinese: " I have a reservation.",
+        pinyin: "\u4f60\u597d\uff0c\u6211\u6709\u4e00\u500b\u9810\u5b9a,\"n\u01d0 h\u01ceo, w\u01d2 y\u01d2u y\u012b g\u00e8 y\u00f9 d\u00ecng",
+        english: "Hello"
+    },
+    {
+        chinese: "\u4f60\u6709\u4ec0\u9ebc\u63a8\u85a6\u7684\u55ce",
+        pinyin: "n\u01d0 y\u01d2u sh\u00e9n me tu\u012b ji\u00e0n de ma",
+        english: "Do you have any recommendations?"
+    },
+    {
+        chinese: "\u9019\u4e5f\u592a\u597d\u5403\u4e86\u5427",
+        pinyin: "zh\u00e8 y\u011b t\u00e0i h\u01ceo ch\u012b le ba",
+        english: "This is so delicious!"
+    },
+    {
+        chinese: "\u6211\u9913\u6b7b\u4e86",
+        pinyin: "w\u01d2 \u00e8 s\u01d0 le",
+        english: "I'm starving."
+    },
+    {
+        chinese: "\u6211\u6490\u6b7b\u4e86",
+        pinyin: "w\u01d2 ch\u0113ng s\u01d0 le",
+        english: "I'm stuffed."
+    },
+    {
+        chinese: "\u5728\u9019\u88e1\u5403\u9084\u662f\u5e36\u8d70",
+        pinyin: "z\u00e0i zh\u00e8 l\u01d0 ch\u012b h\u00e1i sh\u00ec d\u00e0i z\u01d2u",
+        english: "Eat here or take away?"
+    },
+    {
+        chinese: " how much is this?",
+        pinyin: "\u8001\u95c6\uff0c\u9019\u500b\u600e\u9ebc\u8ce3,\"l\u01ceo b\u01cen, zh\u00e8 ge z\u011bn me m\u00e0i",
+        english: "Excuse me"
+    },
+    {
+        chinese: "\u53ef\u4ee5\u4fbf\u5b9c\u4e00\u9ede\u55ce",
+        pinyin: "k\u011b y\u01d0 pi\u00e1n yi y\u012b di\u01cen ma",
+        english: "Can you make it a bit cheaper?"
+    },
+    {
+        chinese: "\u8cb7\u55ae",
+        pinyin: "m\u01cei d\u0101n",
+        english: "Check please."
+    },
+    {
+        chinese: "\u53ef\u4ee5\u7528\u73fe\u91d1\u55ce",
+        pinyin: "k\u011b y\u01d0 y\u00f2ng xi\u00e0n j\u012bn ma",
+        english: "Can I use cash?"
+    },
+    {
+        chinese: "\u53ef\u4ee5\u7528\u4fe1\u7528\u5361\u55ce",
+        pinyin: "k\u011b y\u01d0 y\u00f2ng x\u00ecn y\u00f2ng k\u01ce ma",
+        english: "Can I use a credit card?"
+    },
+    {
+        chinese: "\u6211\u6c92\u6709\u652f\u4ed8\u5bf6/\u6211\u6c92\u6709\u5fae\u4fe1",
+        pinyin: "w\u01d2 m\u00e9i y\u01d2u zh\u012b f\u00f9 b\u01ceo / w\u01d2 m\u00e9i y\u01d2u w\u0113i x\u00ecn",
+        english: "I don't have Alipay or WeChat Pay."
+    },
+    {
+        chinese: "\u6211\u8981\u8a3b\u518a\u4e00\u500b\u5fae\u4fe1",
+        pinyin: "w\u01d2 y\u00e0o zh\u00f9 c\u00e8 y\u012b g\u00e8 w\u0113i x\u00ecn",
+        english: "I want to register a WeChat account."
+    },
+    {
+        chinese: "\u4f60\u7684\u5fae\u4fe1\u53f7\u662f\u591a\u5c11",
+        pinyin: "n\u01d0 de w\u0113i x\u00ecn h\u00e0o sh\u00ec du\u014d sh\u01ceo",
+        english: "What's your WeChat ID?"
+    },
+    {
+        chinese: "\u6211\u958b\u73a9\u7b11\u7684",
+        pinyin: "w\u01d2 k\u0101i w\u00e1n xi\u00e0o de",
+        english: "I was joking."
+    },
+    {
+        chinese: "\u53ef\u4ee5\u5e6b\u6211\u62cd\u5f35\u7167\u55ce",
+        pinyin: "k\u011b y\u01d0 b\u0101ng w\u01d2 p\u0101i zh\u0101ng zh\u00e0o ma",
+        english: "Can you take a photo for me?"
+    },
+    {
+        chinese: "\u6211\u6b63\u5728\u4e0b\u8f09\u9019\u500b App",
+        pinyin: "w\u01d2 zh\u00e8ng z\u00e0i xi\u00e0 z\u00e0i zh\u00e8 ge App",
+        english: "I'm downloading this app right now."
+    },
+    {
+        chinese: "\u9019\u662f\u514d\u8cbb\u7684\u55ce",
+        pinyin: "zh\u00e8 sh\u00ec mi\u01cen f\u00e8i de ma",
+        english: "Is it free?"
+    },
+    {
+        chinese: "\u4f60\u767c\u5b9a\u4f4d\u7d66\u6211\u5427",
+        pinyin: "n\u01d0 f\u0101 d\u00ec w\u00e8i g\u011bi w\u01d2 ba",
+        english: "Please send me the location."
+    },
+    {
+        chinese: "\u4e0d\u95dc\u6211\u7684\u4e8b",
+        pinyin: "b\u00f9 gu\u0101n w\u01d2 de sh\u00ec",
+        english: "It's none of my business."
+    },
+    {
+        chinese: "\u8aaa\u4e86\u5427",
+        pinyin: "shu\u014d le ba",
+        english: "Told you!"
+    },
+    {
+        chinese: "\u6211\u6628\u5929\u665a\u4e0a\u6c92\u7761\u597d",
+        pinyin: "w\u01d2 zu\u00f3 ti\u0101n w\u01cen shang m\u00e9i shu\u00ec h\u01ceo",
+        english: "I didn't sleep well last night."
+    },
+    {
+        chinese: "\u5230\u6642\u5019\u518d\u8aaa\u5427",
+        pinyin: "d\u00e0o sh\u00ed hou z\u00e0i shu\u014d ba",
+        english: "Let's talk about it later."
+    },
+    {
+        chinese: "\u6211\u5c31\u77e5\u9053",
+        pinyin: "w\u01d2 ji\u00f9 zh\u012b d\u00e0o",
+        english: "I knew it."
+    },
+    {
+        chinese: "\u6211\u4e0d\u6703\u653e\u68c4",
+        pinyin: "w\u01d2 b\u00f9 hu\u00ec f\u00e0ng q\u00ec",
+        english: "I won't give up."
+    },
+    {
+        chinese: "\u7e3d\u7b97\u5929\u6674\u4e86",
+        pinyin: "z\u01d2ng su\u00e0n ti\u0101n q\u00edng le",
+        english: "A sunny day finally."
+    },
+    {
+        chinese: "\u4f60\u5230\u5bb6\u4e86\u544a\u8a34\u6211\u554a",
+        pinyin: "n\u01d0 d\u00e0o ji\u0101 le g\u00e0o s\u00f9 w\u01d2 a",
+        english: "Let me know when you get home."
+    },
+    {
+        chinese: "\u5e38\u806f\u7e6b",
+        pinyin: "ch\u00e1ng li\u00e1n x\u00ec",
+        english: "Stay in touch."
+    },
+    {
+        chinese: "\u6ce8\u610f\u5b89\u5168",
+        pinyin: "zh\u00f9 y\u00ec \u0101n qu\u00e1n",
+        english: "Take care / Be safe."
+    },
+    {
+        chinese: "\u4e00\u8def\u5e73\u5b89",
+        pinyin: "y\u012b l\u00f9 p\u00edng \u0101n",
+        english: "Safe journey / Have a safe trip."
+    },
+    {
+        chinese: "\u6211\u5230\u5bb6\u4e86",
+        pinyin: "w\u01d2 d\u00e0o ji\u0101 le",
+        english: "I'm home."
+    }
+];
+
+// Progress tracking with localStorage
+var learnedCards = JSON.parse(localStorage.getItem('learnedCardsPhrases') || '{}');
+var currentFilter = 'all'; // 'all', 'unlearned', 'learned'
+var filteredIndices = [];
+
+var currentIndex = 0;
+var isFlipped = false;
+var showVocab = false;
+
+var flashcard    = document.getElementById('flashcard');
+var cardLabel    = document.getElementById('cardLabel');
+var cardMain     = document.getElementById('cardMain');
+var cardHint     = document.getElementById('cardHint');
+var cardSelect   = document.getElementById('cardSelect');
+var prevBtn      = document.getElementById('prevBtn');
+var nextBtn      = document.getElementById('nextBtn');
+var vocabBtn     = document.getElementById('vocabBtn');
+var vocabSection = document.getElementById('vocabSection');
+var vocabItems   = document.getElementById('vocabItems');
+var grammarNote  = document.getElementById('grammarNote');
+var learnedToggle = document.getElementById('learnedToggle');
+var filterAll     = document.getElementById('filterAll');
+var filterUnlearned = document.getElementById('filterUnlearned');
+var filterLearned = document.getElementById('filterLearned');
+
+function getCardId(index) {
+    return cards[index].chinese;
+}
+
+function isCardLearned(index) {
+    return learnedCards[getCardId(index)] === true;
+}
+
+function toggleCardLearned(index) {
+    var cardId = getCardId(index);
+    if (learnedCards[cardId]) {
+        delete learnedCards[cardId];
+    } else {
+        learnedCards[cardId] = true;
+    }
+    localStorage.setItem('learnedCardsPhrases', JSON.stringify(learnedCards));
+}
+
+function updateFilteredIndices() {
+    filteredIndices = [];
+    for (var i = 0; i < cards.length; i++) {
+        if (currentFilter === 'all') {
+            filteredIndices.push(i);
+        } else if (currentFilter === 'unlearned' && !isCardLearned(i)) {
+            filteredIndices.push(i);
+        } else if (currentFilter === 'learned' && isCardLearned(i)) {
+            filteredIndices.push(i);
+        }
+    }
+    
+    // Reset to first card in filtered list
+    if (filteredIndices.length > 0) {
+        currentIndex = 0;
+    }
+    
+    // Update dropdown
+    cardSelect.innerHTML = '';
+    filteredIndices.forEach(function(realIndex, displayIndex) {
+        var opt = document.createElement('option');
+        opt.value = displayIndex;
+        var learned = isCardLearned(realIndex) ? ' ✓' : '';
+        opt.textContent = 'Card ' + (displayIndex + 1) + ' of ' + filteredIndices.length + learned;
+        cardSelect.appendChild(opt);
+    });
+}
+
+function getCurrentRealIndex() {
+    return filteredIndices[currentIndex] || 0;
+}
+
+function render() {
+    var realIndex = getCurrentRealIndex();
+    var card = cards[realIndex];
+    var learned = isCardLearned(realIndex);
+    
+    cardSelect.value = currentIndex;
+    flashcard.classList.toggle('flipped', isFlipped);
+
+    if (!isFlipped) {
+        cardLabel.textContent = 'FRONT';
+        cardMain.innerHTML = '<div class="card-english">' + card.english + '</div>';
+        cardHint.textContent = 'Click or swipe to flip';
+    } else {
+        cardLabel.textContent = 'BACK';
+        cardMain.innerHTML = '<div class="card-chinese">' + card.chinese + '</div><div class="card-pinyin">' + card.pinyin + '</div>';
+        cardHint.textContent = 'Click or swipe to flip back';
+    }
+
+    // Update learned toggle button
+    if (learned) {
+        learnedToggle.textContent = '↩ Mark as Unlearned';
+        learnedToggle.classList.add('learned');
+    } else {
+        learnedToggle.textContent = '✓ Mark as Learned';
+        learnedToggle.classList.remove('learned');
+    }
+
+    vocabSection.classList.toggle('visible', showVocab);
+    vocabBtn.textContent = (showVocab ? '\uD83D\uDCDA Hide' : '\uD83D\uDCDA Show') + ' Vocabulary Notes';
+
+    if (showVocab) {
+        vocabItems.innerHTML = card.vocabulary.map(function(v) {
+            return '<div class="vocab-item"><span class="vocab-hanzi">' + v.hanzi + '</span> <span class="vocab-pinyin">(' + v.pinyin + ')</span><span class="vocab-meaning"> = ' + v.meaning + '</span></div>';
+        }).join('');
+        grammarNote.innerHTML = '<strong>&#128161; Grammar Tip:</strong> ' + card.grammarNote;
+    }
+}
+
+function goTo(index) {
+    if (filteredIndices.length === 0) return;
+    currentIndex = ((index % filteredIndices.length) + filteredIndices.length) % filteredIndices.length;
+    isFlipped = false;
+    showVocab = false;
+    render();
+}
+
+function setFilter(filter) {
+    currentFilter = filter;
+    filterAll.classList.toggle('active', filter === 'all');
+    filterUnlearned.classList.toggle('active', filter === 'unlearned');
+    filterLearned.classList.toggle('active', filter === 'learned');
+    updateFilteredIndices();
+    render();
+}
+
+// Event listeners
+learnedToggle.addEventListener('click', function() {
+    var currentRealIndex = getCurrentRealIndex();
+    toggleCardLearned(currentRealIndex);
+    
+    // Find the next real card index in the original array
+    var nextRealIndex = currentRealIndex + 1;
+    
+    // Update filtered list with new learned status
+    updateFilteredIndices();
+    
+    // Find where this next card appears in the NEW filtered list
+    if (filteredIndices.length > 0) {
+        var foundIndex = -1;
+        
+        // Try to find the next card in the filtered list
+        for (var i = 0; i < filteredIndices.length; i++) {
+            if (filteredIndices[i] === nextRealIndex) {
+                foundIndex = i;
+                break;
+            }
+        }
+        
+        // If next card is in the filtered list, go to it
+        if (foundIndex !== -1) {
+            currentIndex = foundIndex;
+        }
+        // Otherwise, stay at current position or wrap to start
+        else {
+            // If current position is still valid, stay there
+            if (currentIndex >= filteredIndices.length) {
+                currentIndex = 0; // Wrap to beginning
+            }
+            // else stay at currentIndex (shows whatever card is now at that position)
+        }
+    } else {
+        currentIndex = 0;
+    }
+    
+    // Always show front of next card
+    isFlipped = false;
+    showVocab = false;
+    render();
+});
+
+filterAll.addEventListener('click', function() { setFilter('all'); });
+filterUnlearned.addEventListener('click', function() { setFilter('unlearned'); });
+filterLearned.addEventListener('click', function() { setFilter('learned'); });
+
+// Click handled by touch on mobile; keep for desktop mouse clicks only
+flashcard.addEventListener('click', function(e) {
+    // Only fire on genuine mouse clicks, not touch-triggered synthetic clicks
+    if (e.sourceCapabilities && !e.sourceCapabilities.firesTouchEvents) {
+        isFlipped = !isFlipped;
+        render();
+    } else if (!e.sourceCapabilities) {
+        // Fallback for browsers that don't support sourceCapabilities
+        isFlipped = !isFlipped;
+        render();
+    }
+});
+prevBtn.addEventListener('click', function() { goTo(currentIndex - 1); });
+nextBtn.addEventListener('click', function() { goTo(currentIndex + 1); });
+cardSelect.addEventListener('change', function(e) { goTo(Number(e.target.value)); });
+vocabBtn.addEventListener('click', function() { showVocab = !showVocab; render(); });
+
+var touchStartX = null;
+var touchStartY = null;
+var touchEndX = null;
+var touchEndY = null;
+var touchMoved = false;
+var touchHandled = false;
+var touchStartTime = 0;
+var MIN_SWIPE = 40;
+
+flashcard.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+    touchEndX = touchStartX;
+    touchEndY = touchStartY;
+    touchMoved = false;
+    touchHandled = false;
+    touchStartTime = Date.now();
+}, { passive: true });
+
+flashcard.addEventListener('touchmove', function(e) {
+    touchEndX = e.changedTouches[0].clientX;
+    touchEndY = e.changedTouches[0].clientY;
+    var moved = Math.abs(touchEndX - touchStartX) > 5 || Math.abs(touchEndY - touchStartY) > 5;
+    if (moved) touchMoved = true;
+}, { passive: true });
+
+flashcard.addEventListener('touchend', function(e) {
+    if (touchStartX === null) return;
+
+    var distX = touchStartX - touchEndX;
+    var distY = touchStartY - touchEndY;
+    var touchDuration = Date.now() - touchStartTime;
+
+    // If barely moved and quick tap, treat as a tap -> flip
+    if (!touchMoved && touchDuration < 500 && (Math.abs(distX) < MIN_SWIPE && Math.abs(distY) < MIN_SWIPE)) {
+        e.preventDefault(); // CRITICAL for iOS
+        isFlipped = !isFlipped;
+        render();
+        touchHandled = true;
+        setTimeout(function() { touchHandled = false; }, 600);
+    } else if (touchMoved && Math.abs(distX) >= MIN_SWIPE && Math.abs(distX) > Math.abs(distY)) {
+        // Horizontal swipe -> navigate
+        e.preventDefault();
+        if (distX > 0) goTo(currentIndex + 1);
+        else goTo(currentIndex - 1);
+        touchHandled = true;
+        setTimeout(function() { touchHandled = false; }, 600);
+    }
+
+    touchStartX = null; touchStartY = null;
+    touchEndX = null; touchEndY = null;
+    touchMoved = false;
+}, { passive: false }); // NOT passive so we can preventDefault
+
+// Handle click events (desktop only)
+flashcard.addEventListener('click', function(e) {
+    // Block ALL clicks that happen soon after touch
+    if (touchHandled || Date.now() - touchStartTime < 600) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+    
+    // Desktop mouse click only
+    isFlipped = !isFlipped;
+    render();
+}, false);
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+    else if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
+    else if (e.key === ' ' || e.key === 'Enter') { isFlipped = !isFlipped; render(); }
+});
+
+// Initialize
+updateFilteredIndices();
+render();
+</script>
+</body>
+</html>

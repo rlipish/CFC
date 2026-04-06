@@ -1,7 +1,7 @@
-const CACHE_NAME = 'chinese-flashcards-v6';
+const CACHE_NAME = 'chinese-phrases-v1';
 const urlsToCache = [
-  './chinese-flashcard-app.html',
-  './manifest.json'
+  './chinese-phrases-app.html',
+  './manifest-phrases.json'
 ];
 
 self.addEventListener('install', event => {
