@@ -743,10 +743,20 @@ function render() {
     vocabBtn.textContent = (showVocab ? '\uD83D\uDCDA Hide' : '\uD83D\uDCDA Show') + ' Vocabulary Notes';
 
     if (showVocab) {
-        vocabItems.innerHTML = card.vocabulary.map(function(v) {
-            return '<div class="vocab-item"><span class="vocab-hanzi">' + v.hanzi + '</span> <span class="vocab-pinyin">(' + v.pinyin + ')</span><span class="vocab-meaning"> = ' + v.meaning + '</span></div>';
-        }).join('');
-        grammarNote.innerHTML = '<strong>&#128161; Grammar Tip:</strong> ' + card.grammarNote;
+        if (card.vocabulary && Array.isArray(card.vocabulary)) {
+            vocabItems.innerHTML = card.vocabulary.map(function(v) {
+                return '<div class="vocab-item"><span class="vocab-hanzi">' + v.hanzi + '</span> <span class="vocab-pinyin">(' + v.pinyin + ')</span><span class="vocab-meaning"> = ' + v.meaning + '</span></div>';
+            }).join('');
+        } else {
+            vocabItems.innerHTML = '<div class="vocab-item" style="color: #666; font-style: italic; text-align: center;">No vocabulary notes available for this phrase.</div>';
+        }
+        
+        if (card.grammarNote) {
+            grammarNote.style.display = 'block';
+            grammarNote.innerHTML = '<strong>&#128161; Grammar Tip:</strong> ' + card.grammarNote;
+        } else {
+            grammarNote.style.display = 'none';
+        }
     }
 }
 
@@ -816,18 +826,7 @@ filterAll.addEventListener('click', function() { setFilter('all'); });
 filterUnlearned.addEventListener('click', function() { setFilter('unlearned'); });
 filterLearned.addEventListener('click', function() { setFilter('learned'); });
 
-// Click handled by touch on mobile; keep for desktop mouse clicks only
-flashcard.addEventListener('click', function(e) {
-    // Only fire on genuine mouse clicks, not touch-triggered synthetic clicks
-    if (e.sourceCapabilities && !e.sourceCapabilities.firesTouchEvents) {
-        isFlipped = !isFlipped;
-        render();
-    } else if (!e.sourceCapabilities) {
-        // Fallback for browsers that don't support sourceCapabilities
-        isFlipped = !isFlipped;
-        render();
-    }
-});
+
 prevBtn.addEventListener('click', function() { goTo(currentIndex - 1); });
 nextBtn.addEventListener('click', function() { goTo(currentIndex + 1); });
 cardSelect.addEventListener('change', function(e) { goTo(Number(e.target.value)); });
